@@ -9,7 +9,7 @@ import Iter "mo:base/Iter";
 import T "dip721_types";
 
 actor class DRC721(_name : Text, _symbol : Text) {
-    private var tokenPk : Nat = 0;
+    private stable var tokenPk : Nat = 0;
 
     private stable var ownersEntries : [(T.TokenId, Principal)] = [];
     private stable var balancesEntries : [(Principal, Nat)] = [];
