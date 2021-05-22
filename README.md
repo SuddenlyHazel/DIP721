@@ -1,20 +1,20 @@
-# DIP721
+# DIP721 
 
-Welcome to your new DIP721 project and to the internet computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
+## A Clone of EIP721
 
-To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
+Somebody might find this useful or inspiring. This is pretty much just a clone of the EIP721 standard spun out into Motoko. No metadata has been added. Looks like thats just a free-for-all. I'll be working off this to create some examples that lend themselves more towards the unique properties of the IC. 
 
-To learn more before you start working with DIP721, see the following documentation available online:
+## Good updates?
 
-- [Quick Start](https://sdk.dfinity.org/docs/quickstart/quickstart-intro.html)
-- [SDK Developer Tools](https://sdk.dfinity.org/docs/developers-guide/sdk-guide.html)
-- [Motoko Programming Language Guide](https://sdk.dfinity.org/docs/language-guide/motoko.html)
-- [Motoko Language Quick Reference](https://sdk.dfinity.org/docs/language-guide/language-manual.html)
+1. Dfinity gives us a wonderful Result type. We can use Results with something like
 
-If you want to start working on your project right away, you might want to try the following commands:
-
-```bash
-cd DIP721/
-dfx help
-dfx config --help
 ```
+public type Error = {
+    #foo, #bar
+}
+```
+
+to surface enums that which can be used for internationalization.
+
+2. I didn't actually test this that much.
+

@@ -1,21 +1,8 @@
 {
   "canisters": {
     "DIP721": {
-      "main": "src/DIP721/main.mo",
+      "main": "src/DIP721/DIP721.mo",
       "type": "motoko"
-    },
-    "DIP721_assets": {
-      "dependencies": [
-        "DIP721"
-      ],
-      "frontend": {
-        "entrypoint": "src/DIP721_assets/src/index.html"
-      },
-      "source": [
-        "src/DIP721_assets/assets",
-        "dist/DIP721_assets/"
-      ],
-      "type": "assets"
     }
   },
   "defaults": {
