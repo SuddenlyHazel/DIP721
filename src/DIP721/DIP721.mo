@@ -4,15 +4,22 @@ import HashMap "mo:base/HashMap";
 import Nat "mo:base/Nat";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
+import Array "mo:base/Array";
+import Iter "mo:base/Iter";
 import T "dip721_types";
 
 actor class DRC721(_name : Text, _symbol : Text) {
     private var tokenPk : Nat = 0;
 
-    private let owners : HashMap.HashMap<T.TokenId, Principal> = HashMap.HashMap(10, Nat.equal, Hash.hash);
-    private let balances : HashMap.HashMap<Principal, Nat> = HashMap.HashMap(10, Principal.equal, Principal.hash);
-    private let tokenApprovals : HashMap.HashMap<T.TokenId, Principal> = HashMap.HashMap(10, Nat.equal, Hash.hash);
-    private let operatorApprovals : HashMap.HashMap<Principal, HashMap.HashMap<Principal, Bool>> = HashMap.HashMap(10, Principal.equal, Principal.hash);
+    private stable var ownersEntries : [(T.TokenId, Principal)] = [];
+    private stable var balancesEntries : [(Principal, Nat)] = [];
+    private stable var tokenApprovalsEntries : [(T.TokenId, Principal)] = [];
+    private stable var operatorApprovalsEntries : [(Principal, [Principal])] = [];
+
+    private let owners : HashMap.HashMap<T.TokenId, Principal> = HashMap.fromIter<T.TokenId, Principal>(ownersEntries.vals(), 10, Nat.equal, Hash.hash);
+    private let balances : HashMap.HashMap<Principal, Nat> = HashMap.fromIter<Principal, Nat>(balancesEntries.vals(), 10, Principal.equal, Principal.hash);
+    private let tokenApprovals : HashMap.HashMap<T.TokenId, Principal> = HashMap.fromIter<T.TokenId, Principal>(tokenApprovalsEntries.vals(), 10, Nat.equal, Hash.hash);
+    private let operatorApprovals : HashMap.HashMap<Principal, [Principal]> = HashMap.fromIter<Principal, [Principal]>(operatorApprovalsEntries.vals(), 10, Principal.equal, Principal.hash);
 
     public shared func balanceOf(p : Principal) : async ?Nat {
         return balances.get(p);
@@ -22,11 +29,11 @@ actor class DRC721(_name : Text, _symbol : Text) {
         return _ownerOf(tokenId);
     };
 
-    public shared func name() : async Text {
+    public shared query func name() : async Text {
         return _name;
     };
 
-    public shared func symbol() : async Text {
+    public shared query func symbol() : async Text {
         return _symbol;
     };
 
@@ -56,16 +63,33 @@ actor class DRC721(_name : Text, _symbol : Text) {
 
     public shared(msg) func setApprovalForAll(op : Principal, isApproved : Bool) : () {
         assert msg.caller != op;
-        switch (operatorApprovals.get(msg.caller)) {
-            case (?opList) {
-                opList.put(op, isApproved);
+
+        switch (isApproved) {
+            case true {
+                switch (operatorApprovals.get(msg.caller)) {
+                    case (?opList) {
+                        var array = Array.filter<Principal>(opList,func (p) { p != op });
+                        array := Array.append<Principal>(array, [op]);
+                        operatorApprovals.put(msg.caller, array);
+                    };
+                    case null {
+                        operatorApprovals.put(msg.caller, [op]);
+                    };
+                };
             };
-            case null {
-                let newOpList = HashMap.HashMap<Principal, Bool>(1, Principal.equal, Principal.hash);
-                newOpList.put(op, isApproved);
-                operatorApprovals.put(msg.caller, newOpList);
+            case false {
+                switch (operatorApprovals.get(msg.caller)) {
+                    case (?opList) {
+                        let array = Array.filter<Principal>(opList, func(p) { p != op });
+                        operatorApprovals.put(msg.caller, array);
+                    };
+                    case null {
+                        operatorApprovals.put(msg.caller, []);
+                    };
+                };
             };
-        }
+        };
+        
     };
 
     public shared(msg) func transferFrom(from : Principal, to : Principal, tokenId : Nat) : () {
@@ -89,13 +113,14 @@ actor class DRC721(_name : Text, _symbol : Text) {
 
     private func _isApprovedForAll(owner : Principal, opperator : Principal) : Bool {
         switch (operatorApprovals.get(owner)) {
-            case(?allowMap) {
-                switch(allowMap.get(opperator)) {
-                    case (?status) { return status; };
-                    case null { return false; }
+            case(?whiteList) {
+                for (allow in whiteList.vals()) {
+                    if (allow == opperator) {
+                        return true;
+                    };
                 };
             };
-            case null {return false; }
+            case null {return false;};
         };
         return false;
     };
@@ -186,5 +211,20 @@ actor class DRC721(_name : Text, _symbol : Text) {
         _decrementBalance(owner);
 
         ignore owners.remove(tokenId);
+    };
+
+    system func preupgrade() {
+        ownersEntries := Iter.toArray(owners.entries());
+        balancesEntries := Iter.toArray(balances.entries());
+        tokenApprovalsEntries := Iter.toArray(tokenApprovals.entries());
+        operatorApprovalsEntries := Iter.toArray(operatorApprovals.entries());
+        
+    };
+
+    system func postupgrade() {
+        ownersEntries := [];
+        balancesEntries := [];
+        tokenApprovalsEntries := [];
+        operatorApprovalsEntries := [];
     };
 };
