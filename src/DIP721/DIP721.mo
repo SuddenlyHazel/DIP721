@@ -11,11 +11,13 @@ import T "dip721_types";
 actor class DRC721(_name : Text, _symbol : Text) {
     private stable var tokenPk : Nat = 0;
 
+    private stable var tokenURIEntries : [(T.TokenId, Text)] = [];
     private stable var ownersEntries : [(T.TokenId, Principal)] = [];
     private stable var balancesEntries : [(Principal, Nat)] = [];
     private stable var tokenApprovalsEntries : [(T.TokenId, Principal)] = [];
     private stable var operatorApprovalsEntries : [(Principal, [Principal])] = [];
 
+    private let tokenURIs : HashMap.HashMap<T.TokenId, Text> = HashMap.fromIter<T.TokenId, Text>(tokenURIEntries.vals(), 10, Nat.equal, Hash.hash);
     private let owners : HashMap.HashMap<T.TokenId, Principal> = HashMap.fromIter<T.TokenId, Principal>(ownersEntries.vals(), 10, Nat.equal, Hash.hash);
     private let balances : HashMap.HashMap<Principal, Nat> = HashMap.fromIter<Principal, Nat>(balancesEntries.vals(), 10, Principal.equal, Principal.hash);
     private let tokenApprovals : HashMap.HashMap<T.TokenId, Principal> = HashMap.fromIter<T.TokenId, Principal>(tokenApprovalsEntries.vals(), 10, Nat.equal, Hash.hash);
@@ -27,6 +29,10 @@ actor class DRC721(_name : Text, _symbol : Text) {
 
     public shared func ownerOf(tokenId : T.TokenId) : async ?Principal {
         return _ownerOf(tokenId);
+    };
+
+    public shared query func tokenURI(tokenId : T.TokenId) : async ?Text {
+        return _tokenURI(tokenId);
     };
 
     public shared query func name() : async Text {
@@ -98,9 +104,9 @@ actor class DRC721(_name : Text, _symbol : Text) {
         _transfer(from, to, tokenId);
     };
 
-    public shared(msg) func mint() : async Nat {
+    public shared(msg) func mint(uri : Text) : async Nat {
         tokenPk += 1;
-        _mint(msg.caller, tokenPk);
+        _mint(msg.caller, tokenPk, uri);
         return tokenPk;
     };
 
@@ -109,6 +115,10 @@ actor class DRC721(_name : Text, _symbol : Text) {
 
     private func _ownerOf(tokenId : T.TokenId) : ?Principal {
         return owners.get(tokenId);
+    };
+
+    private func _tokenURI(tokenId : T.TokenId) : ?Text {
+        return tokenURIs.get(tokenId);
     };
 
     private func _isApprovedForAll(owner : Principal, opperator : Principal) : Bool {
@@ -197,11 +207,12 @@ actor class DRC721(_name : Text, _symbol : Text) {
         }
     };
 
-    private func _mint(to : Principal, tokenId : Nat) : () {
+    private func _mint(to : Principal, tokenId : Nat, uri : Text) : () {
         assert not _exists(tokenId);
 
         _incrementBalance(to);
         owners.put(tokenId, to);
+        tokenURIs.put(tokenId,uri)
     };
 
     private func _burn(tokenId : Nat) {
@@ -214,6 +225,7 @@ actor class DRC721(_name : Text, _symbol : Text) {
     };
 
     system func preupgrade() {
+        tokenURIEntries := Iter.toArray(tokenURIs.entries());
         ownersEntries := Iter.toArray(owners.entries());
         balancesEntries := Iter.toArray(balances.entries());
         tokenApprovalsEntries := Iter.toArray(tokenApprovals.entries());
@@ -222,6 +234,7 @@ actor class DRC721(_name : Text, _symbol : Text) {
     };
 
     system func postupgrade() {
+        tokenURIEntries := [];
         ownersEntries := [];
         balancesEntries := [];
         tokenApprovalsEntries := [];
